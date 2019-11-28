@@ -5,7 +5,7 @@ class Player
 {
 public:
     Player(){}
-    int xpos=10,ypos=3,depth=15;
+    int xpos=2,ypos=2,depth=15;
     double angle=0,fov;
 };
 
