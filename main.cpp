@@ -3,7 +3,9 @@
 #include <chrono>
 #include <vector>
 
-#include "Player.h"
+#include "lense.h"
+#include "display.h"
+#include "player.h"
 #include "world.h"
 
 using namespace std;
@@ -12,85 +14,68 @@ int main()
 {
     World w;
     Player p;
-    const double pi = std::acos(-1);
+    const double pi = std::acos ( -1 );
     int xres = 180;
     int yres = 50;
     std::vector<char> screen;
-    int buffer = (xres+1)*(yres);
-    screen.reserve(buffer);
-    std::vector<std::pair<int,int>> rays;
+    int buffer = ( xres+1 ) * ( yres );
+    screen.reserve ( buffer );
+
     p.angle = 0;
-    p.fov = pi;
+    p.fov = pi/2;
     double column = p.fov/xres;
-    p.depth=5;
+    p.depth=15;
     int count = 0;
     auto t1= chrono::system_clock::now();
     auto t2= chrono::system_clock::now();
     int iter = 1;
     double scale = yres;
     double height=4;
-    p.xpos=w.xmax/4;
-    p.ypos=w.ymax/4;
-    while(iter)
-    {
+    p.xpos=1;//w.xmax/4;
+    p.ypos=1;//w.ymax/4;
+    std::pair<int,int> coordinates;
+
+    while ( iter ) {
         t2= chrono::system_clock::now();
         chrono::duration<double> elapsedTime = t2-t1;
         t1=t2;
         double delta = elapsedTime.count();
         p.angle+=0.8*delta;
 //        iter=0;
-        for(int i = 0; i<screen.capacity(); i++)
-            screen[i]='.';
+        drawHorizon ( screen,xres,yres,'-','*' );
         count=0;
-        for(double i = 0; i<=(p.fov); i+=column)
-        {
+        for ( double deltaAngle = 0; deltaAngle<= ( p.fov ); deltaAngle+=column ) {
             double wallDist = 1;
-//            int wallDist = 1;
             bool hitWall = false;
-            while (!hitWall && wallDist<=p.depth)
-            {
-                double arm, depth;
-                double alpha = abs((p.fov/2)-i); //wrong here
-                double beta = p.angle - ((p.fov/2)-i);
-                depth = std::tan(alpha) * wallDist;
-                arm = depth / std::sin(alpha);
-                int x = (std::sin(beta) * arm) + p.xpos;
-                int y = (std::cos(beta) * arm) + p.ypos;
+            while ( !hitWall && wallDist<=p.depth ) {
+                coordinates = fisheye ( p.xpos,p.ypos,p.angle,p.fov,deltaAngle,wallDist );
 
-                if(x>=0 && x<w.xmax && y >=0 && y<w.ymax)
-                {
-                    if(w.map[(y*w.xmax)+x]==w.wall)
-                    {
-                        //                        std::cout<<"x: "<<x<<" y: "<<y<<" alpha: "<<count<<"\n";
-//                        rays.push_back(std::pair<int,int>(wallDist,height));
+                int x = coordinates.first;
+                int y = coordinates.second;
+
+                if ( x>=0 && x<w.xmax && y >=0 && y<w.ymax ) {
+                    if ( w.map[getIndex ( x, w.xmax, y )]==w.wall ) {
                         hitWall=true;
                         height = scale/wallDist;
-//                        for(int j = yres/4; j<3*yres/4;j++)
-//                            screen[j*xres+count]='#';
-                        for ( int j = (yres/2)-(height/2); j<(yres/2)+(height/2); j++)
-                            screen[j*xres+count]='#';
-//                        if(wallDist<p.depth/4)
-
+                        drawColumn ( screen, xres, yres, count, height, w.wall );
                     }
+                } else {
+                    hitWall=true;
+                    height = scale/wallDist;
+                    drawColumn ( screen, xres, yres, count, height, w.wall );
                 }
                 wallDist+=0.1;
-//                wallDist++;
-
             }
             count++;
         }
-        for(int i = 0; i<=yres; i++)
-            screen[i*xres+xres]='\n';
-        int i = 0;
-        std::cout<<"\033[2J\033[1;1H";
-        while( i < buffer)
-            std::cout<<screen[i++];
+
+        clearScr ( std::cout );
+        std::cout<<"angle= "<<p.angle<<" size: "<<screen.capacity() <<"  "<<buffer<<std::endl;
+
+        alignDisplay ( screen,xres,yres );
+        display ( screen );
 
     }
-    std::cout<<"size: "<<rays.size()<<std::endl<<std::endl;
-
-    for(int i = 0; i< rays.size(); i++)
-        std::cout<<"x: "<<rays[i].first<<"  y: "<<rays[i].second<<" tile: "<<(rays[i].second)*w.xmax+rays[i].first<<" height: "<<height<<"\n";
 
     return 0;
 }
