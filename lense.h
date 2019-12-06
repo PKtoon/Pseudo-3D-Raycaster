@@ -18,14 +18,12 @@
 //     return std::pair<int,int>(x,y);
 // }
 
-std::pair<int,int> nonfish(int xpos, int ypos, double playerAngle, double fov, double deltaAngle, double distance)
+std::pair<int,int> nonfisheye(int xpos, int ypos, double playerAngle, double fov, double deltaAngle, double distance)
 {
-    //still confusion in angles, sort it out
-    double arm, depth;
-
     double alpha = (fov/2)-(fov-deltaAngle);
+    
     double absalpha = abs(alpha);
-    depth = (std::tan(absalpha)/std::sin(absalpha))*distance;
+    double depth = (std::tan(absalpha)/std::sin(absalpha))*distance;
     
     double beta = playerAngle + alpha;
 
@@ -35,9 +33,8 @@ std::pair<int,int> nonfish(int xpos, int ypos, double playerAngle, double fov, d
     return std::pair<int,int>(x,y);
 }
 
-std::pair<int,int> fish(int xpos, int ypos, double playerAngle, double fov, double deltaAngle, double distance)
+std::pair<int,int> fisheye(int xpos, int ypos, double playerAngle, double fov, double deltaAngle, double distance)
 {
-//     double alpha = fov/2 - deltaAngle;
     double alpha = (fov/2)-(fov-deltaAngle);
     double beta = playerAngle + alpha;
     
