@@ -22,11 +22,15 @@ int main()
     p.angle = 0;
     p.fov = pi;
     double column = p.fov/xres;
-    p.depth=15;
+    p.depth=5;
     int count = 0;
     auto t1= chrono::system_clock::now();
     auto t2= chrono::system_clock::now();
     int iter = 1;
+    double scale = yres;
+    double height=4;
+    p.xpos=w.xmax/4;
+    p.ypos=w.ymax/4;
     while(iter)
     {
         t2= chrono::system_clock::now();
@@ -35,12 +39,13 @@ int main()
         double delta = elapsedTime.count();
         p.angle+=0.8*delta;
 //        iter=0;
-        for(int i = 0; i<screen.capacity();i++)
+        for(int i = 0; i<screen.capacity(); i++)
             screen[i]='.';
         count=0;
         for(double i = 0; i<=(p.fov); i+=column)
         {
-            double wallDist = 0.1;
+            double wallDist = 1;
+//            int wallDist = 1;
             bool hitWall = false;
             while (!hitWall && wallDist<=p.depth)
             {
@@ -57,13 +62,19 @@ int main()
                     if(w.map[(y*w.xmax)+x]==w.wall)
                     {
                         //                        std::cout<<"x: "<<x<<" y: "<<y<<" alpha: "<<count<<"\n";
-                        rays.push_back(std::pair<int,int>(x,y));
+//                        rays.push_back(std::pair<int,int>(wallDist,height));
                         hitWall=true;
-                        for(int j = yres/4; j<3*yres/4;j++)
+                        height = scale/wallDist;
+//                        for(int j = yres/4; j<3*yres/4;j++)
+//                            screen[j*xres+count]='#';
+                        for ( int j = (yres/2)-(height/2); j<(yres/2)+(height/2); j++)
                             screen[j*xres+count]='#';
+//                        if(wallDist<p.depth/4)
+
                     }
                 }
                 wallDist+=0.1;
+//                wallDist++;
 
             }
             count++;
@@ -79,7 +90,7 @@ int main()
     std::cout<<"size: "<<rays.size()<<std::endl<<std::endl;
 
     for(int i = 0; i< rays.size(); i++)
-        std::cout<<"x: "<<rays[i].first<<"  y: "<<rays[i].second<<" tile: "<<(rays[i].second)*w.xmax+rays[i].first<<"\n";
+        std::cout<<"x: "<<rays[i].first<<"  y: "<<rays[i].second<<" tile: "<<(rays[i].second)*w.xmax+rays[i].first<<" height: "<<height<<"\n";
 
     return 0;
 }
