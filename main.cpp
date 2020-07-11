@@ -1,14 +1,16 @@
 #include <SFML/Graphics.hpp>
 #include <math.h>
 #include <chrono>
+#include <iostream>
 
 const double pi = std::acos(-1);
 
 void drawHorizon(sf::RenderWindow &window, int xRes, int yRes);
-void drawColumn(sf::RenderWindow& window, int yMax, int xOffset, int height, int hitIndex, int hitBeforeIndex, int prevHitIndex, int prevHitBeforeIndex);
+void drawColumn(sf::RenderWindow& window, int yMax, int xOffset, double height, int hitIndex, int hitBeforeIndex, int prevHitIndex, int prevHitBeforeIndex);
 std::pair<double,double> traverse(double playerAngle, double playerFov, double deltaAngle, double length);
+//std::tuple<double,double,double> traverse(double playerAngle, double playerFov, double deltaAngle, double length);
 int getIndex(int row,int column,int maxColumn);
-void castRays(sf::RenderWindow& window, double playerFov, double drawDistance, double playerAngle, char wall, int xRes, int yRes, double scale, double xPos, double yPos, std::string map, int maxColumn);
+void castRays(sf::RenderWindow& window, double playerFov, double drawDistance, double playerAngle, char wall, int xRes, int yRes, double xPos, double yPos, std::string map, int maxColumn);
 void hitwall(double xPos,double yPos,char wall);
 double degreeToRadian(double degree)
 {
@@ -53,17 +55,20 @@ int main()
     int maxColumn = 70;
     int maxRows = 24;
     char wall = '#';
-    double drawDistance = 80;
-    double scale = yRes;
+    double drawDistance = 15;
 
-    int xPos = 3, yPos = 21;
-    double playerAngle = 360-45, playerFov = 90;
+    double xPos = 3, yPos = 3;
+    double playerAngle = 360-45, playerFov = 45;
 
     auto t1= std::chrono::system_clock::now();
     auto t2= std::chrono::system_clock::now();
 
-    sf::RenderWindow window{sf::VideoMode(xRes,yRes),"Game"};
+    sf::RenderWindow window{sf::VideoMode(xRes,yRes),"Renderer FPS: " + std::to_string(0)};
+    window.setVerticalSyncEnabled(true);
 
+    int frame = 0;
+    double ps = 0;
+    bool pause {false};
     while(window.isOpen())
     {
 
@@ -71,7 +76,12 @@ int main()
         std::chrono::duration<double> elapsedTime = t2-t1;
         t1=t2;
         double delta = elapsedTime.count();
-
+        if(ps>=1)
+        {
+            window.setTitle("Renderer FPS: " + std::to_string(frame));
+            ps=0;
+            frame = 0;
+        }
         sf::Event event;
         while (window.pollEvent(event))
         {
@@ -81,19 +91,19 @@ int main()
                     window.close();
                 if(event.key.code == sf::Keyboard::Up)
                 {
-                    std::pair<double,double> coordinates;
-                    coordinates = traverse(playerAngle,playerFov,playerFov/2,0.2);
-                    xPos+=coordinates.first*delta;
-                    yPos+=coordinates.second*delta;
-                    yPos = yPos;
+//                    std::tuple<double,double,double> coordinates;
+//                    coordinates = traverse(playerAngle,playerFov,playerFov/2,0.2);
+//                    xPos+=coordinates.first*delta;
+//                    yPos+=coordinates.second*delta;
+//                    yPos = yPos;
                 }
                 if(event.key.code == sf::Keyboard::Down)
                 {
-                    std::pair<double,double> coordinates;
-                    coordinates = traverse(playerAngle,playerFov,playerFov/2,0.2);
-                    xPos-=coordinates.first*delta;
-                    yPos-=coordinates.second*delta;
-                    yPos = yPos;
+//                    std::pair<double,double> coordinates;
+//                    coordinates = traverse(playerAngle,playerFov,playerFov/2,0.2);
+//                    xPos-=coordinates.first*delta;
+//                    yPos-=coordinates.second*delta;
+//                    yPos = yPos;
                 }
                 if(event.key.code == sf::Keyboard::Left)
                 {
@@ -103,33 +113,41 @@ int main()
                 {
                     playerAngle+=50*delta;
                 }
+                if(event.key.code == sf::Keyboard::Space)
+                {
+                    pause = !pause;
+                }
             }
             // "close requested" event: we close the window
             if (event.type == sf::Event::Closed)
                 window.close();
         }
 
-        if(playerAngle>359)
+        if(playerAngle>=360)
             playerAngle-=360;
-        if(xPos>maxColumn)
+        if(xPos>=maxColumn)
             xPos = maxColumn-1;
-        if(xPos<0)
+        if(xPos<=0)
             xPos = 1;
-        if(yPos>maxRows)
+        if(yPos>=maxRows)
             yPos = maxRows-1;
-        if(yPos<0)
+        if(yPos<=0)
             yPos = 1;
 
         window.clear();
         drawHorizon(window,xRes,yRes);
-        castRays(window,playerFov,drawDistance,playerAngle,wall,xRes,yRes,scale,xPos,yPos,map,maxColumn);
+        castRays(window,playerFov,drawDistance,playerAngle,wall,xRes,yRes,xPos,yPos,map,maxColumn);
         window.display();
+        ps+=delta;
+        frame++;
+        if(!pause){
         playerAngle+=25*delta;
+        }
     }
     return 0;
 }
 
-void castRays(sf::RenderWindow& window, double playerFov, double drawDistance, double playerAngle, char wall, int xRes, int yRes, double scale, double xPos, double yPos, std::string map, int maxColumn)
+void castRays(sf::RenderWindow& window, double playerFov, double drawDistance, double playerAngle, char wall, int xRes, int yRes, double xPos, double yPos, std::string map, int maxColumn)
 {
     int column = 0;
     int prevHitIndex = 0;
@@ -144,12 +162,12 @@ void castRays(sf::RenderWindow& window, double playerFov, double drawDistance, d
         while ( wallDist<=drawDistance )
         {
             coordinates = traverse(playerAngle,playerFov,deltaAngle,wallDist);
-            double x = xPos + coordinates.first;;
+            double x = xPos + coordinates.first;
             double y = yPos + coordinates.second;
             tileIndex = getIndex(y,x,maxColumn);
             if(wall == map[tileIndex])
             {
-                int height = 4*scale/wallDist;
+                double height = (1-(wallDist/drawDistance))*yRes;
                 drawColumn(window,yRes,column,height,tileIndex,previousIndex,prevHitIndex,prevHitBeforeIndex);
                 prevHitIndex = tileIndex;
                 prevHitBeforeIndex = previousIndex;
@@ -170,12 +188,7 @@ void hitwall(double xPos,double yPos,char wall)
 std::pair<double,double> traverse(double playerAngle, double playerFov, double deltaAngle, double length)
 {
     double beta = playerAngle - (playerFov/2) + deltaAngle;
-//    double alpha = std::abs(playerAngle - beta);
-     double alpha = playerAngle - beta;
-//    while(beta>90)
-    {
-//        beta-=90;
-    }
+    double alpha = playerAngle - beta;
 
     alpha = degreeToRadian(alpha);
     beta = degreeToRadian(beta);
@@ -199,9 +212,7 @@ void drawHorizon(sf::RenderWindow &window, int xRes, int yRes)
     shape[1].position = sf::Vector2f(xRes,0);
     shape[2].position = sf::Vector2f(xRes,yRes/2);
     shape[3].position = sf::Vector2f(0,yRes/2);
-//    sf::RectangleShape shape {sf::Vector2f(xRes,yRes/2)};
-//    shape.setPosition(0,0);
-//    shape.setFillColor(sf::Color::Cyan);
+
     window.draw(shape);
 
     shape[0].color = sf::Color::Black;
@@ -212,30 +223,19 @@ void drawHorizon(sf::RenderWindow &window, int xRes, int yRes)
     shape[1].position = sf::Vector2f(xRes,yRes/2);
     shape[2].position = sf::Vector2f(xRes,yRes);
     shape[3].position = sf::Vector2f(0,yRes);
-//    shape.setPosition(0,yRes/2);
-//    shape.setFillColor(sf::Color::Yellow);
+
     window.draw(shape);
 }
 
-void drawColumn(sf::RenderWindow& window, int yMax, int xOffset, int height, int hitIndex, int hitBeforeIndex, int prevHitIndex, int prevHitBeforeIndex)
+void drawColumn(sf::RenderWindow& window, int yMax, int xOffset, double height, int hitIndex, int hitBeforeIndex, int prevHitIndex, int prevHitBeforeIndex)
 {
-    sf::RectangleShape shape {sf::Vector2f(1,height-1)};
-    sf::RectangleShape shape2 {sf::Vector2f(1,1)};
-    sf::RectangleShape shape3 {sf::Vector2f(1,2)};
+    sf::RectangleShape shape {sf::Vector2f(1,height)};
 
-    int yStart = ( yMax/2 )- ( height/2 ) + 1;
-    int yEnd = ( yMax/2 )+ ( height/2 ) - 1;
+    double yStart = ( yMax/2 )- ( height/2 ) ;
 
-    shape2.setPosition(xOffset,yStart-1);
-    shape2.setFillColor(sf::Color::Black);
-//    window.draw(shape2);
+    double shade = (height/900);
 
-    shape3.setPosition(xOffset,yEnd+1);
-    shape3.setFillColor(sf::Color::Black);
-//    window.draw(shape3);
-
-    sf::Color color (0,height*0.41,0);
-//    sf::Color color (0,255,0);
+    sf::Color color (25*shade,25*shade,112*shade);
     shape.setFillColor(color);
 
     if(hitIndex == prevHitIndex && hitBeforeIndex != prevHitBeforeIndex)
